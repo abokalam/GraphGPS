@@ -29,19 +29,21 @@ class DEL_Dataset(InMemoryDataset):
         valid_df = df[df['Split'] == 'valid']
         test_df = df[df['Split'] == 'test']
         
+        
         self.data, self.slices = self.process_data(df)
+        
         
         shuffle_split = {'train': train_df.index.tolist(), 'val': valid_df.index.tolist(), 'test': test_df.index.tolist()}
        
         torch.save(shuffle_split,
                    osp.join(self.folder, f'DEL_shuffle_split_dict.pt'))
         
-        split_names = [
-            'train_graph_index', 'val_graph_index', 'test_graph_index'
-        ]
-        splits = [train_df.index.tolist(), valid_df.index.tolist(), test_df.index.tolist()]
-        for split_name, split_index in zip(split_names, splits):
-            set_dataset_attr(self, split_name, split_index, len(split_index))
+        #split_names = [
+            #'train_graph_index', 'val_graph_index', 'test_graph_index'
+        #]
+        #self.split_idxs = [train_df.index.tolist(), valid_df.index.tolist(), test_df.index.tolist()]
+        #for split_name, split_index in zip(split_names, splits):
+            #set_dataset_attr(self, split_name, split_index, len(split_index))
         #print(self.data)
         print("DEL_v4.py", self.data.val_graph_index[:10])
         
@@ -49,12 +51,6 @@ class DEL_Dataset(InMemoryDataset):
 
         processed_data = (self.data, self.slices)
         torch.save(processed_data, self.processed_paths[0])
-
-        #train_data = self.process_data(train_df)
-
-        #valid_data = self.process_data(valid_df)
-
-        #test_data = self.process_data(test_df)
 
         print('Saving...')
         print(self.processed_paths)
@@ -81,11 +77,19 @@ class DEL_Dataset(InMemoryDataset):
             data.y = torch.tensor([data_df['Activity'].iloc[i]])
 
             self.data_list.append(data)
+            
 
         if self.pre_transform is not None:
             self.data_list = [self.pre_transform(data) for data in self.data_list]
+        
+        data, slices = self.collate(self.data_list)
+        
+        data.train_graph_index = train_df.index.tolist()
+        data.val_graph_index = val_df.index.tolist()
+        data.test_graph_index = test_df.index.tolist()
+            
 
-        return self.collate(self.data_list)
+        return data, slices
     
     
     @property
@@ -118,14 +122,16 @@ class DEL_Dataset(InMemoryDataset):
         
         split_dict = replace_numpy_with_torchtensor(torch.load(split_file))
         return split_dict
+    
 if __name__=='__main__':
     
     root = './DEL'
     dataset = DEL_Dataset(root)
 
     #for split_name in 'train_graph_index', 'val_graph_index', 'test_graph_index':
-        #if not hasattr(dataset.data, split_name):
-            #raise ValueError(f"Missing '{split_name}' for standard split")
+    print(dataset.data.val_graph_index)
+    if not hasattr(dataset.data, 'val_graph_index'):
+        raise ValueError(f"Missing val_graph_index for standard split")
 
     print(len(dataset))  
     print(dataset[0])
