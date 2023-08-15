@@ -25,15 +25,15 @@ class DEL_Dataset(InMemoryDataset):
     def process(self):
         df = pd.read_csv(osp.join(self.original_root, 'DEL_v4.csv'))
         
-        train_df = df[df['Split'] == 'train']
-        valid_df = df[df['Split'] == 'valid']
-        test_df = df[df['Split'] == 'test']
+        self.train_df = df[df['Split'] == 'train']
+        self.valid_df = df[df['Split'] == 'valid']
+        self.test_df = df[df['Split'] == 'test']
         
         
         self.data, self.slices = self.process_data(df)
         
         
-        shuffle_split = {'train': train_df.index.tolist(), 'val': valid_df.index.tolist(), 'test': test_df.index.tolist()}
+        shuffle_split = {'train': self.train_df.index.tolist(), 'val': self.valid_df.index.tolist(), 'test': self.test_df.index.tolist()}
        
         torch.save(shuffle_split,
                    osp.join(self.folder, f'DEL_shuffle_split_dict.pt'))
@@ -84,9 +84,9 @@ class DEL_Dataset(InMemoryDataset):
         
         data, slices = self.collate(self.data_list)
         
-        data.train_graph_index = train_df.index.tolist()
-        data.val_graph_index = val_df.index.tolist()
-        data.test_graph_index = test_df.index.tolist()
+        data.train_graph_index = self.train_df.index.tolist()
+        data.val_graph_index = self.valid_df.index.tolist()
+        data.test_graph_index = self.test_df.index.tolist()
             
 
         return data, slices
@@ -127,6 +127,7 @@ if __name__=='__main__':
     
     root = './DEL'
     dataset = DEL_Dataset(root)
+    print("DEL_v4.py, 130", dataset.data.val_graph_index[:10])
 
     #for split_name in 'train_graph_index', 'val_graph_index', 'test_graph_index':
     print(dataset.data.val_graph_index)
